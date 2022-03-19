@@ -28,7 +28,7 @@ router.post('/revoke-token', authorize(), revokeTokenSchema, revokeToken);
 router.get('/', authorize(Role.Admin), getAll);
 router.get('/:id', authorize(), getById);
 router.get('/:id/refresh-tokens', authorize(), getRefreshTokens);
-router.post('/upload', uploadfile);
+router.post('/upload', upload.single('avatar'), uploadfile);
 router.post('/We', We);
 router.post('/Vodafone', Vodafone);
 router.post('/Etisalat', Etisalat);
@@ -49,7 +49,7 @@ function authenticate(req, res, next) {
     userService.authenticate({ username, password, ipAddress })
         .then(({ refreshToken, ...user }) => {
             setTokenCookie(res, refreshToken);
-            res.render('index', { isdisabled: false });
+            res.render('index', { isdisabled: true });
            // res.json(user);
         })
         .catch(next);
@@ -129,44 +129,41 @@ function setTokenCookie(res, token)
     };
     res.cookie('refreshToken', token, cookieOptions);
 }
-function uploadfile(req, res, next) {
+  async function uploadfile(req, res, next) {
     const workbook = XLSX.readFile(req.file.path)
   data = XLSX.utils.sheet_to_json(workbook.Sheets.Sheet1)
+  console.log(data);
   res.render('index', { isdisabled: false })
-        .catch(next);
 }
 
 async function We(req, res, next) {
-    const workbook = XLSX.readFile('bills.xlsx')
-    const data = XLSX.utils.sheet_to_json(workbook.Sheets.Sheet1)
-
     const browser = await puppeteer.launch({ headless: false })
-    const page = await browser.newPage()
-  
-    for (let i = 0; i < data.length; i++) {
-      const element = String(data[i].Phone)
-      console.log(element)
-  
-      await page.goto('https://my.te.eg/anonymous/AdslPayment', { waitUntil: 'networkidle2' })
-  
-      await page.waitForSelector('.p-inputmask.p-inputtext.p-component')
-      await page.waitForSelector(':nth-child(3) > .col-md-6 > .p-inputtext-sm')
-      await page.waitForSelector('.p-dropdown-label')
-  
-      await page.type('.p-inputmask.p-inputtext.p-component', ' ' + element, { delay: 50 })
-      await page.type(':nth-child(3) > .col-md-6 > .p-inputtext-sm', ' m@m.com', { delay: 50 })
-      await page.click('.p-dropdown-label')
-      await page.click(':nth-child(1) > .p-dropdown-item')
-      await page.click('.col-12 > :nth-child(2)')
-  
-      const txt = await Promise.race([
-        page.waitForSelector('.p-toast-message-content'),
-        page.waitForSelector('.p-field-radiobutton.mb-0.py-3')
-      ])
-      data[i].status = await txt.evaluate(el => el.textContent);
-      console.log(data[i].status)
-    };
-    res.send(data)
+  const page = await browser.newPage()
+
+  for (let i = 0; i < data.length; i++) {
+    const element = String(data[i].Phone)
+    console.log(element)
+
+    await page.goto('https://my.te.eg/anonymous/AdslPayment', { waitUntil: 'networkidle2' })
+
+    await page.waitForSelector('.p-inputmask.p-inputtext.p-component')
+    await page.waitForSelector(':nth-child(3) > .col-md-6 > .p-inputtext-sm')
+    await page.waitForSelector('.p-dropdown-label')
+
+    await page.type('.p-inputmask.p-inputtext.p-component', ' ' + element, { delay: 50 })
+    await page.type(':nth-child(3) > .col-md-6 > .p-inputtext-sm', ' m@m.com', { delay: 50 })
+    await page.click('.p-dropdown-label')
+    await page.click(':nth-child(1) > .p-dropdown-item')
+    await page.click('.col-12 > :nth-child(2)')
+
+    const txt = await Promise.race([
+      page.waitForSelector('.p-toast-message-content'),
+      page.waitForSelector('.p-field-radiobutton.mb-0.py-3')
+    ])
+    data[i].status = await txt.evaluate(el => el.textContent);
+    console.log(data[i].status)
+  };
+  res.send(data)
   }
 
   async function Vodafone(req, res, next) {
@@ -201,51 +198,41 @@ async function We(req, res, next) {
     };
     res.send(data)
   }
-  async function Etisalat(req, res, next) {
-    //  const workbook = XLSX.readFile('bills.xlsx')
-   //const data = XLSX.utils.sheet_to_json(workbook.Sheets.Sheet1)
-  
+  async function Etisalat(req, res, next) {  
       const browser = await puppeteer.launch({ headless: false })
       const page = await browser.newPage()
       await page.goto('https://newextranet.etisalat.com.eg/', { waitUntil: 'networkidle2' });
-      await page.waitForSelector('.p-inputmask.p-inputtext.p-component')
-      await page.waitForSelector(':nth-child(3) > .col-md-6 > .p-inputtext-sm')
-      await page.waitForSelector('.p-dropdown-label')
-      var userName = await page.$("#username");
-      var password = await page.$("#password");
-      userName= req.username;
-      password= req.password;
-     //await page.waitForSelector('.p-inputmask.p-inputtext.p-component')
-     /* await page.waitForSelector(':nth-child(3) > .col-md-6 > .p-inputtext-sm')
-      await page.waitForSelector('.p-dropdown-label')
-      await page.type('.p-inputmask.p-inputtext.p-component', ' ' + element, { delay: 50 })
-      await page.type(':nth-child(3) > .col-md-6 > .p-inputtext-sm', ' m@m.com', { delay: 50 })
-      await page.click('.p-dropdown-label')
-      await page.click(':nth-child(1) > .p-dropdown-item')
-      await page.click('.col-12 > :nth-child(2)')*/
+      await page.waitForSelector('#username')
+      await page.waitForSelector('#password')
+      await page.waitForSelector('#overview > section:nth-child(1) > div > div.mdl-card__supporting-text > form > button > span')
+    
+      await page.type('#username', req.body.username, { delay: 50 })
+      await page.type('#password', req.body.password, { delay: 50 })
+      await page.click('#overview > section:nth-child(1) > div > div.mdl-card__supporting-text > form > button > span')
+    
 
-/*      for (let i = 0; i < data.length; i++) {
+     for (let i = 0; i < data.length; i++) {
         const element = String(data[i].Phone)
-        console.log(element)
+        const code =String(data[i].Code )
+        
+        console.log(code+element)
     
-        await page.goto('https://my.te.eg/anonymous/AdslPayment', { waitUntil: 'networkidle2' })
+        await page.goto('https://newextranet.etisalat.com.eg/pages/dsl/newDslReqLandLine.dts', { waitUntil: 'networkidle2' })
     
-        await page.waitForSelector('.p-inputmask.p-inputtext.p-component')
-        await page.waitForSelector(':nth-child(3) > .col-md-6 > .p-inputtext-sm')
-        await page.waitForSelector('.p-dropdown-label')
+        await page.waitForSelector('#landLine')
+        await page.waitForSelector('#landLineType')
+        await page.waitForSelector('#jspx_generated_79 > img')
     
-        await page.type('.p-inputmask.p-inputtext.p-component', ' ' + element, { delay: 50 })
-        await page.type(':nth-child(3) > .col-md-6 > .p-inputtext-sm', ' m@m.com', { delay: 50 })
-        await page.click('.p-dropdown-label')
-        await page.click(':nth-child(1) > .p-dropdown-item')
-        await page.click('.col-12 > :nth-child(2)')
+        await page.type('#landLine', '0'+ code + element, { delay: 50 })
+        await page.type('#landLineType','MSAN', { delay: 50 })
+        await page.click('#jspx_generated_79 > img')
     
         const txt = await Promise.race([
-          page.waitForSelector('.p-toast-message-content'),
-          page.waitForSelector('.p-field-radiobutton.mb-0.py-3')
+          page.waitForSelector('#customerBasicData > td > table > tbody > tr:nth-child(1) > td > fieldset > legend'),
+          page.waitForSelector('#errorMessage')
         ])
         data[i].status = await txt.evaluate(el => el.textContent);
         console.log(data[i].status)
-      };*/
+      };
       res.send(data)
     }
