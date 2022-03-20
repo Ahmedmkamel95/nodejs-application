@@ -33,11 +33,12 @@ app.post('/Orange', async (req, res) => {
   const page = await browser.newPage()
 
   for (let i = 0; i < data.length; i++) {
-    const element = data[i].Phone
+    const element = data[i].Phone;
+    const Code = data[i].Code;
     console.log(element)
 
     await page.goto('https://dsl.orange.eg/ar/myaccount/pay-bill', { waitUntil: 'networkidle2' })
-    await page.type('.FormControl.FL input', String('0' + element), { delay: 50 })
+    await page.type('.FormControl.FL input', String('0' + Code + element), { delay: 50 })
     await page.click('#ctl00_ctl33_g_b2324828_3a1e_47b3_96a3_ff169f762c76_ctl00_btnGetUserBills')
 
     // await page.waitForNavigation({ waitUntil: 'networkidle0' })
