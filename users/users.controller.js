@@ -8,7 +8,8 @@ const userService = require('./user.service');
 const app = express()
 const XLSX = require('xlsx')
 const puppeteer = require('puppeteer')
-const multer = require('multer')
+const multer = require('multer');
+const { string } = require('@hapi/joi');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, file.originalname)
@@ -35,6 +36,65 @@ router.post('/Vodafone', Vodafone);
 router.post('/Etisalat', Etisalat);
 
 module.exports = router;
+const map = {
+  "2" : "Cairo",
+  "3" : "Alexandria",
+  "40" : "Al Gharbya",
+  "88" : "Assiut",
+  "97" : "Aswan",
+  "45" : "Behira",
+  "82" : "Beni Souif",
+  "50" : "Dakahliya",
+  "57" : "Damietta",
+  "84" : "Fayoum",
+  "64" : "Ismalia",
+  "47" : "Kafr El-Sheikh",
+  "95" : "Luxor",
+  "46" : "Matroh",
+  "86" : "Menia",
+  "48" : "Menoufia",
+  "68" : "North Sinai",
+  "66" : "Port Said",
+  "13" : "Qaliobia",
+  "96" : "Quina",
+  "55" : "Sharkia",
+  "93" : "Souhag",
+  "69" : "South Sinai",
+  "62" : "Suez",
+  "92" : "Wadi Gadid",
+  "15" : "10th of Ramadan",
+  "65" : "Red Sea"
+};
+const maparr = {
+  "1" : "2",
+  "2" : "3",
+  "3" : "40",
+  "4" : "88",
+  "5" : "97",
+  "6" : "45",
+  "7" : "82",
+  "8" : "50",
+  "9" : "57",
+  "10" : "84",
+  "11" : "64",
+  "12" : "47",
+  "13" : "95",
+  "14" : "46",
+  "15" : "86",
+  "16" : "48",
+  "17" : "68",
+  "18" : "66",
+  "19" : "13",
+  "20" : "96",
+  "21" : "65",
+  "22" : "55",
+  "23" : "93",
+  "24" : "69",
+  "25" : "62",
+  "26" : "92",
+  "27" : "15",
+};
+
 
 function authenticateSchema(req, res, next) {
     const schema = Joi.object({
@@ -163,15 +223,18 @@ async function Orange (req,res,next){
   res.send(data);
 
 }
-
+async function getKeyByValue(object, value) {
+  return Object.keys(object).find(key => object[key] === value);
+}
 async function We(req, res, next) {
   const browser = await puppeteer.launch({ headless: false })
   const page = await browser.newPage()
-
+  
   for (let i = 0; i < data.length; i++) {
     const element = String(data[i].Phone)
-    console.log(element)
-
+    const Code = String(data[i].Code)
+    var mohafza = await getKeyByValue(maparr,Code);
+    console.log("code"+ mohafza)
     await page.goto('https://my.te.eg/anonymous/AdslPayment', { waitUntil: 'networkidle2' })
 
     await page.waitForSelector('.p-inputmask.p-inputtext.p-component')
@@ -181,7 +244,8 @@ async function We(req, res, next) {
     await page.type('.p-inputmask.p-inputtext.p-component', ' ' + element, { delay: 50 })
     await page.type(':nth-child(3) > .col-md-6 > .p-inputtext-sm', ' m@m.com', { delay: 50 })
     await page.click('.p-dropdown-label')
-    await page.click(':nth-child(1) > .p-dropdown-item')
+    await page.type(':nth-child('+mohafza+') > .p-dropdown-item',{ delay: 50 })
+  // await page.select('body > app-root > div > div.p-mt-5.top-relative > app-anonymous-adsl-payment > div > p-card > div > div > div > div > form > div:nth-child(1) > div:nth-child(1) > p-dropdown > div',mohafza,{ delay: 50 });
     await page.click('.col-12 > :nth-child(2)')
 
     const txt = await Promise.race([
