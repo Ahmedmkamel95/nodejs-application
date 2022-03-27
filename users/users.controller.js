@@ -31,6 +31,7 @@ router.get('/:id', authorize(), getById);
 router.get('/:id/refresh-tokens', authorize(), getRefreshTokens);
 router.post('/upload', upload.single('avatar'), uploadfile);
 router.post('/We', We);
+router.post('/WeAPi', WeAPi);
 router.post('/Orange', Orange);
 router.post('/Vodafone', Vodafone);
 router.post('/Etisalat', Etisalat);
@@ -200,19 +201,26 @@ async function Orange (req,res,next){
   const browser = await puppeteer.launch({ headless: false })
   const page = await browser.newPage()
 
+ //await page.waitForNavigation({ waitUntil: 'networkidle0' })
   for (let i = 0; i < data.length; i++) {
     const element = data[i].Phone;
     const Code = data[i].Code;
-    console.log(element)
-
+    console.log('0'+Code+element)
     await page.goto('https://dsl.orange.eg/ar/myaccount/pay-bill', { waitUntil: 'networkidle2' })
+    await page.waitForSelector('.FormControl.FL input')
+    await page.waitForSelector('#ctl00_ctl33_g_b2324828_3a1e_47b3_96a3_ff169f762c76_ctl00_btnGetUserBills')
+    
+    const ele = await Promise.race([
+      page.waitForSelector('#ctl00_ctl33_g_b2324828_3a1e_47b3_96a3_ff169f762c76_ctl00_btnGetUserBills')
+    ])
+   
+    console.log(await ele.evaluate(el => el.textContent))
     await page.type('.FormControl.FL input', String('0' + Code + element), { delay: 50 })
     await page.click('#ctl00_ctl33_g_b2324828_3a1e_47b3_96a3_ff169f762c76_ctl00_btnGetUserBills')
 
-    // await page.waitForNavigation({ waitUntil: 'networkidle0' })
-
     const txt = await Promise.race([
-      page.waitForSelector('.GeneralLink span')
+      page.waitForSelector('.GeneralLink span',{timeout:10000000}),
+      // page.waitForSelector('#ctl00_ctl33_g_b2324828_3a1e_47b3_96a3_ff169f762c76_ctl00_regxLineNumber')//.catch(error => console.log('failed to wait  for the selector'))
     ])
 
     console.log(await txt.evaluate(el => el.textContent))
@@ -221,7 +229,6 @@ async function Orange (req,res,next){
   }
   await convertToExcelSheet(data);
   res.send(data);
-
 }
 async function getKeyByValue(object, value) {
   return Object.keys(object).find(key => object[key] === value);
@@ -230,11 +237,12 @@ async function We(req, res, next) {
   const browser = await puppeteer.launch({ headless: false })
   const page = await browser.newPage()
   
-  for (let i = 0; i < data.length; i++) {
+    for (let i = 0; i < data.length; i++) {
+      try {
     const element = String(data[i].Phone)
     const Code = String(data[i].Code)
     var mohafza = await getKeyByValue(maparr,Code);
-    console.log("code"+ mohafza)
+    console.log(element)
     await page.goto('https://my.te.eg/anonymous/AdslPayment', { waitUntil: 'networkidle2' })
 
     await page.waitForSelector('.p-inputmask.p-inputtext.p-component')
@@ -244,7 +252,8 @@ async function We(req, res, next) {
     await page.type('.p-inputmask.p-inputtext.p-component', ' ' + element, { delay: 50 })
     await page.type(':nth-child(3) > .col-md-6 > .p-inputtext-sm', ' m@m.com', { delay: 50 })
     await page.click('.p-dropdown-label')
-    await page.type(':nth-child('+mohafza+') > .p-dropdown-item',{ delay: 50 })
+    console.log("code :"+ mohafza)
+    await page.click(':nth-child(' + mohafza + ') > .p-dropdown-item')
   // await page.select('body > app-root > div > div.p-mt-5.top-relative > app-anonymous-adsl-payment > div > p-card > div > div > div > div > form > div:nth-child(1) > div:nth-child(1) > p-dropdown > div',mohafza,{ delay: 50 });
     await page.click('.col-12 > :nth-child(2)')
 
@@ -252,12 +261,23 @@ async function We(req, res, next) {
       page.waitForSelector('.p-toast-message-content'),
       page.waitForSelector('.p-field-radiobutton.mb-0.py-3')
     ])
-    data[i].status = await txt.evaluate(el => el.textContent);
+    var result = await txt.evaluate(el => el.textContent);
+    console.log(result)
+    if (result == " Subscriber information is not exist.") {
+      data[i].status = "الرقم غير متاح";
+    }
+    else {
+      data[i].status = "الرقم متاح للتعاقد ";
+    }
     console.log(data[i].status)
-  };
+    }
+     catch{
+       continue;
+    }
+  }
   await convertToExcelSheet(data);
   res.send(data)
-  }
+} 
  
   async function Vodafone(req, res, next) {
     const browser = await puppeteer.launch({ headless: false })
@@ -278,6 +298,7 @@ async function We(req, res, next) {
     await page.click('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf_retailTabs > div > ul > li.ng-star-inserted > a');
     
     for (let i = 0; i < data.length; i++) {
+      
       const element = String(data[i].Phone);
       const code = String(data[i].Code );
       console.log(code + element)
@@ -287,22 +308,30 @@ async function We(req, res, next) {
       await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(1) > div > input');
       await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(1) > div > div > select');
       await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(2) > select');
+      await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(2) > select > option');
       await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div.btns.text-center > button.btn.next-btn.ml-2');
   
       
       await page.type('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(1) > div > input',element, { delay: 50 });
       await page.type('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(1) > div > div > select','0'+code, { delay: 50 });
-      await page.click('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(2) > select');
-      //await page.type('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(2) > select','ضوئى',{ delay: 50 });
+      await page.select('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(2) > select', 'ضوئي');
       await page.click('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div.btns.text-center > button.btn.next-btn.ml-2');
   
       const txt = await Promise.race([
-        page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.clientType.ng-star-inserted > div.row.clientTypeRow > label'),
-        page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.serviceContent_halfSec > div > p')
+        page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.serviceContent_halfSec > div > p').catch(error => console.log('failed to wait  for the selector')),
+        page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.clientType.ng-star-inserted > p').catch(error => console.log('failed to wait selector 2')), 
       ])
-      data[i].status = await txt.evaluate(el => el.textContent);
-      console.log(data[i].status)
-    };
+     
+      var result = await txt.evaluate(el => el.textContent);
+      console.log(result)
+      if (result == "بيانات العميل") {
+        data[i].status = "الرقم متاح للتعاقد ";
+      }
+      else {  
+        data[i].status = result;
+      }
+      console.log(data[i].status)  
+    }
     await convertToExcelSheet(data);
     res.send(data)
   }
@@ -313,36 +342,43 @@ async function We(req, res, next) {
       await page.goto('https://newextranet.etisalat.com.eg/', { waitUntil: 'networkidle2' });
       await page.waitForSelector('#username')
       await page.waitForSelector('#password')
-      await page.waitForSelector('#overview > section:nth-child(1) > div > div.mdl-card__supporting-text > form > button > span')
+      await page.waitForSelector('#overview > section:nth-child(1) > div > div.mdl-card__supporting-text > form > button')
     
       await page.type('#username', req.body.username, { delay: 50 })
       await page.type('#password', req.body.password, { delay: 50 })
-      await page.click('#overview > section:nth-child(1) > div > div.mdl-card__supporting-text > form > button > span')
+      await page.click('#overview > section:nth-child(1) > div > div.mdl-card__supporting-text > form > button')
     
-
+      await page.waitForSelector('#overview > section.section--centerwelcome.mdl-grid.mdl-grid--no-spacing.mdl-shadow--2dp > div')
      for (let i = 0; i < data.length; i++) {
         const element = String(data[i].Phone)
         const code =String(data[i].Code )
         
         console.log(code+element)
-    
+            
         await page.goto('https://newextranet.etisalat.com.eg/pages/dsl/newDslReqLandLine.dts', { waitUntil: 'networkidle2' })
     
         await page.waitForSelector('#landLine')
         await page.waitForSelector('#landLineType')
-        await page.waitForSelector('#jspx_generated_79 > img')
-    
+        await page.waitForSelector('#msisdnCheck > td')
+       
         await page.type('#landLine', '0'+ code + element, { delay: 50 })
         await page.type('#landLineType','MSAN', { delay: 50 })
-        await page.click('#jspx_generated_79 > img')
-    
+        await page.click('#msisdnCheck > td > a');
+        
         const txt = await Promise.race([
           page.waitForSelector('#customerBasicData > td > table > tbody > tr:nth-child(1) > td > fieldset > legend'),
           page.waitForSelector('#errorMessage')
         ])
-        data[i].status = await txt.evaluate(el => el.textContent);
-        console.log(data[i].status)
-      };
+        var result = await txt.evaluate(el => el.textContent);
+        console.log(result)
+       
+        if (result =="الخط متصل بخط DSL اخر") {
+          data[i].status = result; 
+        }
+        else {
+          data[i].status ="غير متصل بخط dsl"
+        }
+      }
       await convertToExcelSheet(data);
       res.send(data)
     }
@@ -358,3 +394,64 @@ async function We(req, res, next) {
         // export your excel
         XLSX.writeFile(wb, 'Binaire.xlsx');
      }
+
+   async function WeAPi(req, res, next) {
+      const browser = await puppeteer.launch({
+        args: ["--enable-features=NetworkService", "--no-sandbox"],
+        ignoreHTTPSErrors: true,
+         headless: false 
+      });
+
+      const page = await browser.newPage()
+     
+        for (let i = 0; i < data.length; i++) {
+          await page.goto('https://my.te.eg/anonymous/AdslPayment', { waitUntil: 'networkidle2' })
+          await page.setRequestInterception(true);
+          page.once("request", interceptedRequest => {
+            interceptedRequest.continue({
+              method: "POST",
+              postData: req.body,
+              headers: req.header
+            });
+          });
+          const response = await page.goto("https://api-my.te.eg/api/line/adsl/amount");
+
+      console.log({
+        url: response.url(),
+        statusCode: response.status(),
+        body: await response.text()
+      });
+       /* const element = String(data[i].Phone)
+        const Code = String(data[i].Code)
+        var mohafza = await getKeyByValue(maparr,Code);
+        console.log(element)
+        await page.goto('https://my.te.eg/anonymous/AdslPayment', { waitUntil: 'networkidle2' })
+    
+        await page.waitForSelector('.p-inputmask.p-inputtext.p-component')
+        await page.waitForSelector(':nth-child(3) > .col-md-6 > .p-inputtext-sm')
+        await page.waitForSelector('.p-dropdown-label')
+    
+        await page.type('.p-inputmask.p-inputtext.p-component', ' ' + element, { delay: 50 })
+        await page.type(':nth-child(3) > .col-md-6 > .p-inputtext-sm', ' m@m.com', { delay: 50 })
+        await page.click('.p-dropdown-label')
+        await page.click(':nth-child(1) > .p-dropdown-item')
+      // await page.select('body > app-root > div > div.p-mt-5.top-relative > app-anonymous-adsl-payment > div > p-card > div > div > div > div > form > div:nth-child(1) > div:nth-child(1) > p-dropdown > div',mohafza,{ delay: 50 });
+        await page.click('.col-12 > :nth-child(2)')
+    
+        const txt = await Promise.race([
+          page.waitForSelector('.p-toast-message-content'),
+          page.waitForSelector('.p-field-radiobutton.mb-0.py-3')
+        ])
+        var result = await txt.evaluate(el => el.textContent);
+        console.log(result)
+        if (result == " Subscriber information is not exist.") {
+          data[i].status = "الرقم غير متاح";
+        }
+        else {
+          data[i].status = "الرقم متاح للتعاقد ";
+        }
+        console.log(data[i].status)*/
+      }
+      await convertToExcelSheet(data);
+      res.send(data)
+    } 
