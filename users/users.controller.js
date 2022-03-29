@@ -203,6 +203,7 @@ async function Orange (req,res,next){
 
  //await page.waitForNavigation({ waitUntil: 'networkidle0' })
   for (let i = 0; i < data.length; i++) {
+    try {
     const element = data[i].Phone;
     const Code = data[i].Code;
     console.log('0'+Code+element)
@@ -219,13 +220,17 @@ async function Orange (req,res,next){
     await page.click('#ctl00_ctl33_g_b2324828_3a1e_47b3_96a3_ff169f762c76_ctl00_btnGetUserBills')
 
     const txt = await Promise.race([
-      page.waitForSelector('.GeneralLink span',{timeout:10000000}),
+      page.waitForSelector('.GeneralLink span',{timeout:4000}),
       // page.waitForSelector('#ctl00_ctl33_g_b2324828_3a1e_47b3_96a3_ff169f762c76_ctl00_regxLineNumber')//.catch(error => console.log('failed to wait  for the selector'))
     ])
 
     console.log(await txt.evaluate(el => el.textContent))
     data[i].status = await txt.evaluate(el => el.textContent);
     console.log(data[i].status)
+  }
+  catch {
+    continue;
+  }
   }
   await convertToExcelSheet(data);
   res.send(data);
@@ -262,8 +267,9 @@ async function We(req, res, next) {
       page.waitForSelector('.p-field-radiobutton.mb-0.py-3')
     ])
     var result = await txt.evaluate(el => el.textContent);
+    let checkError = result.includes("Subscriber information is not exist.");
     console.log(result)
-    if (result == " Subscriber information is not exist.") {
+    if (checkError == true) {
       data[i].status = "الرقم غير متاح";
     }
     else {
@@ -271,7 +277,8 @@ async function We(req, res, next) {
     }
     console.log(data[i].status)
     }
-     catch{
+     catch {
+        --i;
        continue;
     }
   }
@@ -298,7 +305,7 @@ async function We(req, res, next) {
     await page.click('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf_retailTabs > div > ul > li.ng-star-inserted > a');
     
     for (let i = 0; i < data.length; i++) {
-      
+      try {
       const element = String(data[i].Phone);
       const code = String(data[i].Code );
       console.log(code + element)
@@ -307,30 +314,33 @@ async function We(req, res, next) {
   
       await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(1) > div > input');
       await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(1) > div > div > select');
-      await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(2) > select');
-      await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(2) > select > option');
+      await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(2) > select');  
       await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div.btns.text-center > button.btn.next-btn.ml-2');
-  
-      
       await page.type('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(1) > div > input',element, { delay: 50 });
-      await page.type('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(1) > div > div > select','0'+code, { delay: 50 });
+      await page.type('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(1) > div > div > select','0'+code, { delay: 100 });
       await page.select('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div:nth-child(2) > select', 'ضوئي');
       await page.click('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.first-content.ng-star-inserted > form > div.btns.text-center > button.btn.next-btn.ml-2');
   
       const txt = await Promise.race([
-        page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.serviceContent_halfSec > div > p').catch(error => console.log('failed to wait  for the selector')),
-        page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.clientType.ng-star-inserted > p').catch(error => console.log('failed to wait selector 2')), 
+        page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.serviceContent_halfSec > div > p',{timeout:3000}).catch(error => console.log('failed to wait  for the selector')),
+        page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf-retailTabs_content > app-adsl > div > div > div > div > div > div.clientType.ng-star-inserted > p',{timeout:3000}).catch(error => console.log('failed to wait selector 2')), 
       ])
      
       var result = await txt.evaluate(el => el.textContent);
       console.log(result)
-      if (result == "بيانات العميل") {
+      let checkError = result.includes("بيانات العميل");
+      if (checkError == true) {
         data[i].status = "الرقم متاح للتعاقد ";
       }
       else {  
         data[i].status = result;
       }
       console.log(data[i].status)  
+      } 
+      catch {
+        --i;
+        continue;
+      }
     }
     await convertToExcelSheet(data);
     res.send(data)
@@ -350,6 +360,7 @@ async function We(req, res, next) {
     
       await page.waitForSelector('#overview > section.section--centerwelcome.mdl-grid.mdl-grid--no-spacing.mdl-shadow--2dp > div')
      for (let i = 0; i < data.length; i++) {
+       try {
         const element = String(data[i].Phone)
         const code =String(data[i].Code )
         
@@ -370,14 +381,20 @@ async function We(req, res, next) {
           page.waitForSelector('#errorMessage')
         ])
         var result = await txt.evaluate(el => el.textContent);
-        console.log(result)
-       
-        if (result =="الخط متصل بخط DSL اخر") {
-          data[i].status = result; 
+        let checkError = result.includes("DSL");
+        if (checkError) {
+          data[i].status = result;
+          console.log("ana hene ") 
         }
         else {
           data[i].status ="غير متصل بخط dsl"
         }
+        console.log(data[i].status)
+      }
+      catch {
+        --i;
+        continue;
+      }
       }
       await convertToExcelSheet(data);
       res.send(data)
