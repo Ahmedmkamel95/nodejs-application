@@ -220,15 +220,16 @@ async function Orange (req,res,next){
     await page.click('#ctl00_ctl33_g_b2324828_3a1e_47b3_96a3_ff169f762c76_ctl00_btnGetUserBills')
 
     const txt = await Promise.race([
-      page.waitForSelector('.GeneralLink span',{timeout:4000}),
+      page.waitForSelector('.GeneralLink span'),
       // page.waitForSelector('#ctl00_ctl33_g_b2324828_3a1e_47b3_96a3_ff169f762c76_ctl00_regxLineNumber')//.catch(error => console.log('failed to wait  for the selector'))
     ])
 
     console.log(await txt.evaluate(el => el.textContent))
-    data[i].status = await txt.evaluate(el => el.textContent);
+    data[i].statusOrange = await txt.evaluate(el => el.textContent);
     console.log(data[i].status)
   }
   catch {
+    --i;
     continue;
   }
   }
@@ -270,10 +271,10 @@ async function We(req, res, next) {
     let checkError = result.includes("Subscriber information is not exist.");
     console.log(result)
     if (checkError == true) {
-      data[i].status = "الرقم غير متاح";
+      data[i].statusWe = "الرقم غير متاح";
     }
     else {
-      data[i].status = "الرقم متاح للتعاقد ";
+      data[i].statusWe = "الرقم متاح للتعاقد ";
     }
     console.log(data[i].status)
     }
@@ -330,10 +331,10 @@ async function We(req, res, next) {
       console.log(result)
       let checkError = result.includes("بيانات العميل");
       if (checkError == true) {
-        data[i].status = "الرقم متاح للتعاقد ";
+        data[i].statusVodafone = "الرقم متاح للتعاقد ";
       }
       else {  
-        data[i].status = result;
+        data[i].statusVodafone = result;
       }
       console.log(data[i].status)  
       } 
@@ -383,11 +384,11 @@ async function We(req, res, next) {
         var result = await txt.evaluate(el => el.textContent);
         let checkError = result.includes("DSL");
         if (checkError) {
-          data[i].status = result;
+          data[i].statusEtisalat = result;
           console.log("ana hene ") 
         }
         else {
-          data[i].status ="غير متصل بخط dsl"
+          data[i].statusEtisalat ="غير متصل بخط dsl"
         }
         console.log(data[i].status)
       }
