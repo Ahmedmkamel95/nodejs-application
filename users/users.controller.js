@@ -7,9 +7,9 @@ const Role = require('_helpers/role');
 const userService = require('./user.service');
 const app = express()
 const XLSX = require('xlsx')
+const fs = require('fs')
 const puppeteer = require('puppeteer')
 const multer = require('multer');
-const { string } = require('@hapi/joi');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, file.originalname)
@@ -199,8 +199,9 @@ async function uploadfile(req, res, next) {
 async function Orange(req, res, next) {
   const browser = await puppeteer.launch({ headless: false })
   const page = await browser.newPage()
-
-  console.time();
+  var BreakLoop = 0;
+  var stopCondation = data.length + 10;
+  console.time('orange :: ');
   for (let i = 0; i < data.length; i++) {
     try {
       const element = data[i].Phone;
@@ -223,18 +224,30 @@ async function Orange(req, res, next) {
         page.waitForSelector('.GeneralLink span'),
         page.waitForSelector('.TariffTableClasses')
       ])
-
+          
       console.log(await txt.evaluate(el => el.textContent))
       data[i].statusOrange = await txt.evaluate(el => el.textContent);
       console.log(data[i].status)
     } catch {
       --i;
+      if(BreakLoop == stopCondation) {
+        break;
+      }
       continue;
     }
+    finally{
+     break;      
+    }
   }
-  console.timeEnd('orange :: ');
-  await convertToExcelSheet(data, 'orange');
-  res.send(data);
+  
+  const fileName = global.refreshToken + '-orange.xlsx';
+  console.timeEnd(fileName);
+  await convertToExcelSheet(data, fileName);
+  res.setHeader('Content-disposition', 'attachment; filename=' + fileName);
+  res.setHeader('Content-type', 'application/vnd.ms-excel');
+
+  var fileStream = fs.createReadStream(fileName);
+  fileStream.pipe(res);
 }
 async function getKeyByValue(object, value) {
   return Object.keys(object).find(key => object[key] === value);
@@ -244,8 +257,11 @@ async function We(req, res, next) {
   const page = await browser.newPage()
 
   console.time();
+  var BreakLoop = 0;
+  var stopCondation = data.length + 10;
   for (let i = 0; i < data.length; i++) {
     try {
+      BreakLoop++;
       const element = String(data[i].Phone)
       const Code = String(data[i].Code)
       var mohafza = await getKeyByValue(maparr, Code);
@@ -281,12 +297,24 @@ async function We(req, res, next) {
     }
     catch {
       --i;
+      if(BreakLoop == stopCondation) {
+        break;
+      }
       continue;
     }
+    finally{
+     break;      
+    }
   }
-  console.timeEnd('we :: ');
-  await convertToExcelSheet(data, 'we');
-  res.send(data)
+  
+  const fileName = global.refreshToken + '-we.xlsx';
+  console.timeEnd(fileName);
+  await convertToExcelSheet(data, fileName);
+  res.setHeader('Content-disposition', 'attachment; filename=' + fileName);
+  res.setHeader('Content-type', 'application/vnd.ms-excel');
+
+  var fileStream = fs.createReadStream(fileName);
+  fileStream.pipe(res);
 }
 
 async function Vodafone(req, res, next) {
@@ -306,7 +334,8 @@ async function Vodafone(req, res, next) {
 
   await page.waitForSelector('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf_retailTabs > div > ul > li.ng-star-inserted > a');
   await page.click('body > app-root > app-dealer-engagement > app-home > div > div > div > div.vf_retailTabs > div > ul > li.ng-star-inserted > a');
-
+  var BreakLoop = 0;
+  var stopCondation = data.length + 10;
   console.time();
   for (let i = 0; i < data.length; i++) {
     try {
@@ -343,12 +372,24 @@ async function Vodafone(req, res, next) {
     }
     catch {
       --i;
+      if(BreakLoop == stopCondation) {
+        break;
+      }
       continue;
     }
+    finally{
+      break;
+    }
   }
-  console.timeEnd('vodafone :: ');
-  await convertToExcelSheet(data, 'vodafone');
-  res.send(data)
+  
+  const fileName = global.refreshToken + '-vodafone.xlsx';
+  console.timeEnd(fileName);
+  await convertToExcelSheet(data, fileName);
+  res.setHeader('Content-disposition', 'attachment; filename=' + fileName);
+  res.setHeader('Content-type', 'application/vnd.ms-excel');
+
+  var fileStream = fs.createReadStream(fileName);
+  fileStream.pipe(res);
 }
 
 async function Etisalat(req, res, next) {
@@ -364,6 +405,8 @@ async function Etisalat(req, res, next) {
   await page.click('#overview > section:nth-child(1) > div > div.mdl-card__supporting-text > form > button')
 
   await page.waitForSelector('#overview > section.section--centerwelcome.mdl-grid.mdl-grid--no-spacing.mdl-shadow--2dp > div')
+  var BreakLoop = 0;
+  var stopCondation = data.length + 10;
   console.time();
   for (let i = 0; i < data.length; i++) {
     try {
@@ -399,14 +442,26 @@ async function Etisalat(req, res, next) {
     }
     catch {
       --i;
+      if(BreakLoop == stopCondation) {
+        break;
+      }
       continue;
     }
+    finally{
+      break;
+    }
   }
-  console.timeEnd('etisalat :: ');
-  await convertToExcelSheet(data, 'etisalat');
-  res.send(data)
+
+  const fileName = global.refreshToken + '-etisalat.xlsx';
+  console.timeEnd(fileName);
+  await convertToExcelSheet(data, fileName);
+  res.setHeader('Content-disposition', 'attachment; filename=' + fileName);
+  res.setHeader('Content-type', 'application/vnd.ms-excel');
+
+  var fileStream = fs.createReadStream(fileName);
+  fileStream.pipe(res);
 }
-async function convertToExcelSheet(data, prefix) {
+async function convertToExcelSheet(data, fileName) {
   let binaryWS = XLSX.utils.json_to_sheet(data);
 
   // Create a new Workbook
@@ -416,7 +471,7 @@ async function convertToExcelSheet(data, prefix) {
   XLSX.utils.book_append_sheet(wb, binaryWS, 'Binary values')
 
   // export your excel
-  XLSX.writeFile(wb, prefix + '.xlsx');
+  XLSX.writeFile(wb, fileName, { bookType: 'xlsx', type: 'binary' });
 }
 
 async function WeAPi(req, res, next) {
